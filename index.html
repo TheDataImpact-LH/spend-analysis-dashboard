@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Procurement Spend Analytics Dashboard</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;600;700&display=swap');
+
+  :root {
+    --navy: #0D1B2A;
+    --teal: #00C9A7;
+    --teal-dim: #00C9A720;
+    --amber: #F4A261;
+    --slate: #1E2D3E;
+    --muted: #8A9BB0;
+    --card: #162333;
+    --border: #243447;
+    --white: #F0F6FF;
+    --red: #E05252;
+    --green: #2DD4A0;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--navy);
+    color: var(--white);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    min-height: 100vh;
+  }
+
+  /* Header */
+  .header {
+    background: var(--slate);
+    border-bottom: 1px solid var(--border);
+    padding: 18px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .header-left { display: flex; align-items: center; gap: 16px; }
+  .logo-dot {
+    width: 36px; height: 36px; border-radius: 8px;
+    background: linear-gradient(135deg, var(--teal), #0099CC);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700; font-size: 16px; color: var(--navy);
+  }
+  .header h1 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 18px; font-weight: 600; color: var(--white);
+  }
+  .header p { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .badge {
+    background: var(--teal-dim); border: 1px solid var(--teal);
+    color: var(--teal); padding: 5px 14px; border-radius: 20px;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.5px;
+  }
+  .date-range {
+    font-size: 12px; color: var(--muted);
+    background: var(--card); border: 1px solid var(--border);
+    padding: 6px 14px; border-radius: 6px;
+  }
+
+  /* Layout */
+  .container { padding: 24px 32px; max-width: 1400px; margin: 0 auto; }
+
+  /* KPI row */
+  .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+  .kpi-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px 24px;
+    position: relative; overflow: hidden;
+  }
+  .kpi-card::before {
+    content: ''; position: absolute; top: 0; left: 0;
+    width: 100%; height: 3px;
+  }
+  .kpi-card.green::before { background: var(--teal); }
+  .kpi-card.amber::before { background: var(--amber); }
+  .kpi-card.blue::before { background: #5B9EF5; }
+  .kpi-card.red::before { background: var(--red); }
+  .kpi-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 10px; }
+  .kpi-value {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 30px; font-weight: 700; color: var(--white); line-height: 1;
+  }
+  .kpi-sub { font-size: 12px; margin-top: 8px; }
+  .kpi-sub.up { color: var(--green); }
+  .kpi-sub.down { color: var(--red); }
+  .kpi-icon {
+    position: absolute; top: 18px; right: 20px;
+    font-size: 22px; opacity: 0.3;
+  }
+
+  /* Grid layout */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .grid-3 { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 22px 24px;
+  }
+  .card-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 14px; font-weight: 600; color: var(--white);
+    margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center;
+  }
+  .card-title span { font-size: 11px; color: var(--muted); font-weight: 400; font-family: 'Inter', sans-serif; }
+
+  /* Bar chart */
+  .bar-chart { display: flex; flex-direction: column; gap: 12px; }
+  .bar-row { display: flex; align-items: center; gap: 12px; }
+  .bar-label { width: 140px; font-size: 12px; color: var(--muted); flex-shrink: 0; }
+  .bar-track { flex: 1; background: var(--navy); border-radius: 4px; height: 22px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 4px; display: flex; align-items: center; padding-left: 10px; font-size: 11px; font-weight: 600; color: var(--navy); transition: width 1s ease; }
+  .bar-amount { width: 80px; text-align: right; font-size: 12px; color: var(--white); font-weight: 500; }
+
+  /* Donut chart */
+  .donut-wrap { display: flex; align-items: center; gap: 24px; }
+  .donut-svg { flex-shrink: 0; }
+  .legend { display: flex; flex-direction: column; gap: 10px; }
+  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .legend-name { color: var(--muted); min-width: 120px; }
+  .legend-pct { color: var(--white); font-weight: 600; }
+
+  /* Savings table */
+  .savings-table { width: 100%; border-collapse: collapse; }
+  .savings-table th {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.7px;
+    color: var(--muted); padding: 0 12px 12px; text-align: left; border-bottom: 1px solid var(--border);
+  }
+  .savings-table td { padding: 12px; font-size: 12px; border-bottom: 1px solid var(--border)20; }
+  .savings-table tr:last-child td { border-bottom: none; }
+  .tag {
+    padding: 3px 10px; border-radius: 12px; font-size: 10px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .tag.high { background: #E0525220; color: var(--red); }
+  .tag.med { background: #F4A26120; color: var(--amber); }
+  .tag.low { background: #00C9A720; color: var(--teal); }
+  .saving-amt { color: var(--teal); font-weight: 600; }
+
+  /* Trend sparkline */
+  .sparkline-row { display: flex; gap: 4px; align-items: flex-end; height: 50px; margin-top: 12px; }
+  .spark-bar {
+    flex: 1; border-radius: 3px 3px 0 0;
+    background: linear-gradient(180deg, var(--teal), #007A6A);
+    transition: opacity 0.2s;
+  }
+  .spark-bar:hover { opacity: 0.7; }
+  .spark-labels { display: flex; justify-content: space-between; margin-top: 6px; }
+  .spark-labels span { font-size: 10px; color: var(--muted); }
+
+  /* Supplier list */
+  .supplier-list { display: flex; flex-direction: column; gap: 12px; }
+  .supplier-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .supplier-rank { width: 24px; height: 24px; border-radius: 6px; background: var(--navy); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: var(--muted); }
+  .supplier-info { flex: 1; }
+  .supplier-name { font-size: 13px; color: var(--white); font-weight: 500; }
+  .supplier-cat { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .supplier-spend { font-family: 'Space Grotesk', sans-serif; font-size: 14px; font-weight: 700; color: var(--white); }
+  .supplier-bar-track { width: 80px; height: 4px; background: var(--navy); border-radius: 2px; margin-top: 4px; }
+  .supplier-bar-fill { height: 100%; border-radius: 2px; background: linear-gradient(90deg, var(--teal), #5B9EF5); }
+
+  /* Executive summary */
+  .exec-summary { background: linear-gradient(135deg, #162333, #0D1B2A); border: 1px solid var(--teal)40; border-radius: 12px; padding: 24px; margin-top: 16px; }
+  .exec-title { font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 700; color: var(--teal); margin-bottom: 16px; }
+  .exec-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .exec-item {}
+  .exec-item-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 6px; }
+  .exec-item-text { font-size: 13px; color: var(--white); line-height: 1.6; }
+  .exec-item-highlight { color: var(--teal); font-weight: 600; }
+
+  /* Footer */
+  .footer {
+    border-top: 1px solid var(--border); padding: 14px 32px;
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 8px;
+  }
+  .footer-left { font-size: 11px; color: var(--muted); }
+  .footer-right { font-size: 11px; color: var(--muted); }
+  .analyst-name { color: var(--teal); font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="logo-dot">P$</div>
+    <div>
+      <h1>Procurement Spend Analytics Dashboard</h1>
+      <p>Senior Procurement & Data Analytics Consultant · LaKeisha Harris</p>
+    </div>
+  </div>
+  <div style="display:flex;gap:12px;align-items:center;">
+    <div class="date-range">📅 FY 2024 · Q1–Q4</div>
+    <div class="badge">LIVE REPORT</div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- KPI Row -->
+  <div class="kpi-row">
+    <div class="kpi-card green">
+      <div class="kpi-label">Total Procurement Spend</div>
+      <div class="kpi-value">$48.7M</div>
+      <div class="kpi-sub up">↑ 3.2% vs PY</div>
+      <div class="kpi-icon">💰</div>
+    </div>
+    <div class="kpi-card amber">
+      <div class="kpi-label">Identified Savings</div>
+      <div class="kpi-value">$4.9M</div>
+      <div class="kpi-sub up">10% of total spend</div>
+      <div class="kpi-icon">🎯</div>
+    </div>
+    <div class="kpi-card blue">
+      <div class="kpi-label">Active Suppliers</div>
+      <div class="kpi-value">247</div>
+      <div class="kpi-sub down">↓ 18 from consolidation</div>
+      <div class="kpi-icon">🏭</div>
+    </div>
+    <div class="kpi-card red">
+      <div class="kpi-label">PO Cycle Time</div>
+      <div class="kpi-value">3.2d</div>
+      <div class="kpi-sub up">↓ 20% improvement</div>
+      <div class="kpi-icon">⚡</div>
+    </div>
+  </div>
+
+  <!-- Row 2: Spend by Category + Top Suppliers -->
+  <div class="grid-2">
+
+    <!-- Category Breakdown -->
+    <div class="card">
+      <div class="card-title">Spend by Category <span>% of total · FY 2024</span></div>
+      <div class="donut-wrap">
+        <svg class="donut-svg" viewBox="0 0 160 160" width="160" height="160">
+          <!-- Facility Services 28% -->
+          <circle cx="80" cy="80" r="56" fill="none" stroke="#00C9A7" stroke-width="28"
+            stroke-dasharray="98.5 253" stroke-dashoffset="0" transform="rotate(-90 80 80)"/>
+          <!-- IT & Technology 22% -->
+          <circle cx="80" cy="80" r="56" fill="none" stroke="#5B9EF5" stroke-width="28"
+            stroke-dasharray="77.4 253" stroke-dashoffset="-98.5" transform="rotate(-90 80 80)"/>
+          <!-- MRO 18% -->
+          <circle cx="80" cy="80" r="56" fill="none" stroke="#F4A261" stroke-width="28"
+            stroke-dasharray="63.3 253" stroke-dashoffset="-175.9" transform="rotate(-90 80 80)"/>
+          <!-- Professional Services 16% -->
+          <circle cx="80" cy="80" r="56" fill="none" stroke="#A78BFA" stroke-width="28"
+            stroke-dasharray="56.3 253" stroke-dashoffset="-239.2" transform="rotate(-90 80 80)"/>
+          <!-- Other 16% -->
+          <circle cx="80" cy="80" r="56" fill="none" stroke="#334E68" stroke-width="28"
+            stroke-dasharray="56.2 253" stroke-dashoffset="-295.5" transform="rotate(-90 80 80)"/>
+          <circle cx="80" cy="80" r="42" fill="#162333"/>
+          <text x="80" y="76" text-anchor="middle" fill="#F0F6FF" font-size="18" font-family="Space Grotesk" font-weight="700">$48.7M</text>
+          <text x="80" y="94" text-anchor="middle" fill="#8A9BB0" font-size="10">Total Spend</text>
+        </svg>
+        <div class="legend">
+          <div class="legend-item"><div class="legend-dot" style="background:#00C9A7"></div><span class="legend-name">Facility Services</span><span class="legend-pct">28% · $13.6M</span></div>
+          <div class="legend-item"><div class="legend-dot" style="background:#5B9EF5"></div><span class="legend-name">IT & Technology</span><span class="legend-pct">22% · $10.7M</span></div>
+          <div class="legend-item"><div class="legend-dot" style="background:#F4A261"></div><span class="legend-name">MRO Supplies</span><span class="legend-pct">18% · $8.8M</span></div>
+          <div class="legend-item"><div class="legend-dot" style="background:#A78BFA"></div><span class="legend-name">Professional Svcs</span><span class="legend-pct">16% · $7.8M</span></div>
+          <div class="legend-item"><div class="legend-dot" style="background:#334E68"></div><span class="legend-name">Other</span><span class="legend-pct">16% · $7.8M</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Top Suppliers -->
+    <div class="card">
+      <div class="card-title">Top 6 Suppliers by Spend <span>ranked by annual volume</span></div>
+      <div class="supplier-list">
+        <div class="supplier-item">
+          <div class="supplier-rank">1</div>
+          <div class="supplier-info">
+            <div class="supplier-name">Grainger Industrial</div>
+            <div class="supplier-cat">MRO / Facility</div>
+            <div class="supplier-bar-track"><div class="supplier-bar-fill" style="width:100%"></div></div>
+          </div>
+          <div class="supplier-spend">$6.2M</div>
+        </div>
+        <div class="supplier-item">
+          <div class="supplier-rank">2</div>
+          <div class="supplier-info">
+            <div class="supplier-name">Dell Technologies</div>
+            <div class="supplier-cat">IT Hardware</div>
+            <div class="supplier-bar-track"><div class="supplier-bar-fill" style="width:76%"></div></div>
+          </div>
+          <div class="supplier-spend">$4.7M</div>
+        </div>
+        <div class="supplier-item">
+          <div class="supplier-rank">3</div>
+          <div class="supplier-info">
+            <div class="supplier-name">ABM Industries</div>
+            <div class="supplier-cat">Facility Services</div>
+            <div class="supplier-bar-track"><div class="supplier-bar-fill" style="width:65%"></div></div>
+          </div>
+          <div class="supplier-spend">$4.0M</div>
+        </div>
+        <div class="supplier-item">
+          <div class="supplier-rank">4</div>
+          <div class="supplier-info">
+            <div class="supplier-name">Microsoft / Azure</div>
+            <div class="supplier-cat">Cloud / Software</div>
+            <div class="supplier-bar-track"><div class="supplier-bar-fill" style="width:53%"></div></div>
+          </div>
+          <div class="supplier-spend">$3.3M</div>
+        </div>
+        <div class="supplier-item">
+          <div class="supplier-rank">5</div>
+          <div class="supplier-info">
+            <div class="supplier-name">Deloitte Consulting</div>
+            <div class="supplier-cat">Professional Services</div>
+            <div class="supplier-bar-track"><div class="supplier-bar-fill" style="width:42%"></div></div>
+          </div>
+          <div class="supplier-spend">$2.6M</div>
+        </div>
+        <div class="supplier-item">
+          <div class="supplier-rank">6</div>
+          <div class="supplier-info">
+            <div class="supplier-name">Cintas Corp</div>
+            <div class="supplier-cat">Uniforms / Safety</div>
+            <div class="supplier-bar-track"><div class="supplier-bar-fill" style="width:32%"></div></div>
+          </div>
+          <div class="supplier-spend">$2.0M</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Row 3: Monthly Trend + Savings Opportunities -->
+  <div class="grid-2">
+
+    <!-- Monthly spend trend -->
+    <div class="card">
+      <div class="card-title">Monthly Spend Trend <span>actual vs. budget · $M</span></div>
+      <div style="display:flex;gap:16px;margin-bottom:16px;">
+        <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)"><div style="width:12px;height:3px;background:var(--teal);border-radius:2px"></div>Actual</div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)"><div style="width:12px;height:3px;background:var(--amber);border-radius:2px;opacity:0.6"></div>Budget</div>
+      </div>
+      <svg viewBox="0 0 560 140" width="100%" style="overflow:visible">
+        <!-- Grid lines -->
+        <line x1="0" y1="20" x2="560" y2="20" stroke="#243447" stroke-width="1"/>
+        <line x1="0" y1="60" x2="560" y2="60" stroke="#243447" stroke-width="1"/>
+        <line x1="0" y1="100" x2="560" y2="100" stroke="#243447" stroke-width="1"/>
+        <line x1="0" y1="130" x2="560" y2="130" stroke="#243447" stroke-width="1"/>
+        <!-- Y labels -->
+        <text x="-2" y="23" fill="#8A9BB0" font-size="9" text-anchor="end">$5M</text>
+        <text x="-2" y="63" fill="#8A9BB0" font-size="9" text-anchor="end">$4M</text>
+        <text x="-2" y="103" fill="#8A9BB0" font-size="9" text-anchor="end">$3M</text>
+        <!-- Budget line -->
+        <polyline points="20,70 60,65 105,68 150,62 195,70 240,65 285,60 330,68 375,62 420,70 465,65 510,68" fill="none" stroke="#F4A261" stroke-width="1.5" stroke-dasharray="4 3" opacity="0.6"/>
+        <!-- Actual line -->
+        <polyline points="20,75 60,58 105,65 150,45 195,72 240,52 285,40 330,60 375,48 420,68 465,42 510,55" fill="none" stroke="#00C9A7" stroke-width="2.5"/>
+        <!-- Area fill -->
+        <polygon points="20,75 60,58 105,65 150,45 195,72 240,52 285,40 330,60 375,48 420,68 465,42 510,55 510,130 20,130" fill="url(#tealGrad)" opacity="0.15"/>
+        <defs>
+          <linearGradient id="tealGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#00C9A7"/>
+            <stop offset="100%" stop-color="transparent"/>
+          </linearGradient>
+        </defs>
+        <!-- Data points -->
+        <circle cx="285" cy="40" r="4" fill="#00C9A7"/>
+        <text x="285" y="32" fill="#00C9A7" font-size="9" text-anchor="middle">$4.8M</text>
+        <!-- Month labels -->
+        <text x="20" y="145" fill="#8A9BB0" font-size="9" text-anchor="middle">Jan</text>
+        <text x="60" y="145" fill="#8A9BB0" font-size="9" text-anchor="middle">Feb</text>
+        <text x="105" y="145" fill="#8A9BB0" font-size="9" text-anchor="middle">Mar</text>
+        <text x="150" y="145" fill="#8A9BB0" font-size="9" text-anchor="middle">Apr</text>
+        <text x="195" y="145" fill="#8A9BB0" font-size="9" text-anchor="middle">May</text>
+        <text x="240" y="145" fill="#8A9BB0" font-size="9" text-anchor="middle">Jun</text>
+        <text x="285" y="145" fill="#8A9BB0" font-size="9" text-anchor="middle">Jul</text>
+        <text x="330" y="145" fill="#8A9BB0" font-size="9" text-anchor="middle">Aug</text>
+        <text x="375" y="145" fill="#8A9BB0" font-size="9" text-anchor="middle">Sep</text>
+        <text x="420" y="145" fill="#8A9BB0" font-size="9" text-anchor="middle">Oct</text>
+        <text x="465" y="145" fill="#8A9BB0" font-size="9" text-anchor="middle">Nov</text>
+        <text x="510" y="145" fill="#8A9BB0" font-size="9" text-anchor="middle">Dec</text>
+      </svg>
+    </div>
+
+    <!-- Savings opportunities -->
+    <div class="card">
+      <div class="card-title">Savings Opportunities <span>SQL + analysis · 4 initiatives</span></div>
+      <table class="savings-table">
+        <thead>
+          <tr>
+            <th>Initiative</th>
+            <th>Priority</th>
+            <th>Est. Savings</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <div style="font-weight:500;color:var(--white)">Supplier Consolidation</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px">Reduce tail spend · 18 vendors</div>
+            </td>
+            <td><span class="tag high">High</span></td>
+            <td class="saving-amt">$2.1M</td>
+          </tr>
+          <tr>
+            <td>
+              <div style="font-weight:500;color:var(--white)">Contract Renegotiation</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px">MRO & Facility top 3</div>
+            </td>
+            <td><span class="tag high">High</span></td>
+            <td class="saving-amt">$1.4M</td>
+          </tr>
+          <tr>
+            <td>
+              <div style="font-weight:500;color:var(--white)">Invoice Automation</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px">Eliminate 400+ manual hours</div>
+            </td>
+            <td><span class="tag med">Med</span></td>
+            <td class="saving-amt">$820K</td>
+          </tr>
+          <tr>
+            <td>
+              <div style="font-weight:500;color:var(--white)">Category Strategy</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px">IT & Cloud rebidding</div>
+            </td>
+            <td><span class="tag low">Low</span></td>
+            <td class="saving-amt">$580K</td>
+          </tr>
+        </tbody>
+      </table>
+      <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:12px;color:var(--muted)">Total Identified Savings</span>
+        <span style="font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;color:var(--teal)">$4.9M</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Executive Summary -->
+  <div class="exec-summary">
+    <div class="exec-title">📋 Executive Summary · FY 2024</div>
+    <div class="exec-grid">
+      <div class="exec-item">
+        <div class="exec-item-label">Spend Performance</div>
+        <div class="exec-item-text">Total procurement spend reached <span class="exec-item-highlight">$48.7M</span> against a $49.8M budget — 2.2% favorable variance driven by supplier consolidation and renegotiated Facility Services contracts.</div>
+      </div>
+      <div class="exec-item">
+        <div class="exec-item-label">Savings Delivered</div>
+        <div class="exec-item-text">SQL-driven spend analysis identified <span class="exec-item-highlight">$4.9M in savings opportunities</span> (10% of total). $2.8M already captured via supplier reduction and FBDI automation; $2.1M in pipeline.</div>
+      </div>
+      <div class="exec-item">
+        <div class="exec-item-label">Operational Efficiency</div>
+        <div class="exec-item-text">PO cycle time reduced <span class="exec-item-highlight">20%</span> to 3.2 days through Blanket PO standardization and Oracle workflow automation. Supplier base reduced by 18 through strategic consolidation.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">
+  <div class="footer-left">Procurement Spend Analytics Dashboard · Data Source: Oracle ERP / Coupa · FY 2024</div>
+  <div class="footer-right">Analyst: <span class="analyst-name">LaKeisha Harris</span> · Sr. Procurement Data Analyst · lakeisha.harris@analytics.com</div>
+</div>
+
+</body>
+</html>
